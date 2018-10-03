@@ -36,8 +36,8 @@ extern char **environ;                   // environment array
 int main (int argc, char *argv)
 {
 	setbuf(stdout, NULL);
-	if(argv[1]&& !access(argv[1],F_OK))
-		freopen(argv[1],"r",stdin);
+	if(argv[1])
+		freopen(argv[1],"w",stdin);
 
 
 	char buf[MAX_BUFFER];                    //   line buffer
@@ -105,9 +105,7 @@ int main (int argc, char *argv)
 				if (!strcmp(args[0],"environ")){
 					char ** env = environ;
 
-					while (*env) printf("%s\n",*env++);  
-					// step through environment
-
+					while (*env) printf("%s\n",*env++);  // step through environment
 					continue;
 				}
 				if(!strcmp(args[0],"ditto")){//ditto command
