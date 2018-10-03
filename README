@@ -1,0 +1,24 @@
+Project 2
+
+Name: ZANE GRAY
+
+Email address: zanejgr@gmail.com	
+
+
+Date: 10/1/2018
+
+Description
+project 2 takes project 1, and replaces calls to system() with the fork-exec pattern. 
+Additionally, it adds the commands mkdirz() and rmdirz() to make and remove directories exclusively.
+
+It also adds IO manipulation. It will prefix the prompt with the current working directory.
+
+
+
+
+
+Sources:
+linux manpages (especially syscalls(2))
+The Linux Programming Interface (esp chapters 4 and 11)
+https://oudalab.github.io/cs3113fa18
+the tlpi-dist file
