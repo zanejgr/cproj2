@@ -33,7 +33,7 @@ esc - exits from the program
 #define MAX_ARGS 64                             //max # args
 
 extern char **environ;                   // environment array
-int main (int argc, char *argv)
+int main (int argc, char **argv)
 {
 	setbuf(stdout, NULL);
 	if(argv[1]&& !access(argv[1],F_OK))
