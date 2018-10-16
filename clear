@@ -100,9 +100,10 @@ int main (int argc, char **argv)
 
 
 					if(!fork()){
-						execlp("cat", "cat", "/projects/1/README",NULL);
+					       	execv("cat", &"/projects/1/README");
 						_exit(EXIT_SUCCESS);
-					}else sleep(1);
+					}
+					else while(wait(&status)){}
 					continue;
 				}
 				//environ
@@ -125,18 +126,15 @@ int main (int argc, char **argv)
 				{
 					if(args[1]&&!access(args[1],F_OK))
 					{
-						if(!fork()){
-							execlp("ls","ls","-l",args[1],NULL);
-							_exit(EXIT_SUCCESS);
-						}else sleep(1);
-						continue;
+
+						char tmp[strlen(args[1]+7)];
+						tmp[0]='\0';
+						strcat("ls -l \0", tmp);
+						system(strcat(args[1],tmp));
 
 					}
 					else{
-						if(!fork()){
-							execlp("ls","ls","-l",NULL);
-							_exit(EXIT_SUCCESS);
-						}else sleep(1);	
+						system("ls -l");
 					}			
 					continue;
 				}
@@ -144,10 +142,7 @@ int main (int argc, char **argv)
 				// check for internal/external command
 
 				if (!strcmp(args[0],"wipe")) { // "clear" command
-					if(!fork()){
-						execlp("clear","clear",NULL);
-						_exit(EXIT_SUCCESS);
-					}else sleep(1);
+					system("clear");
 					continue;
 				}
 
@@ -160,10 +155,7 @@ int main (int argc, char **argv)
 					}
 					else{
 
-						if(!fork()){
-							execlp("pwd","pwd",NULL);
-							_exit(EXIT_SUCCESS);
-						}else sleep(1);
+						system("pwd");	
 						fputs("\n",stdout);
 					}
 					continue;
@@ -178,10 +170,7 @@ int main (int argc, char **argv)
 
 
 				arg = args;
-			 	if(!fork()){
-					execvp(args[0],args);
-					_exit(EXIT_SUCCESS);
-				}else sleep(1);	
+				while (*arg) system(*arg++);
 			}
 		}
 	}
