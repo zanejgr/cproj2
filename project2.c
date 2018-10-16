@@ -32,15 +32,19 @@ esc - exits from the program
 #define SEPARATORS " \t\n"                     // token sparators
 #define MAX_BUFFER 1024                        // max line buffer
 #define MAX_ARGS 64                             //max # args
-
+int STDIN_FILENO,STDOUT_FILENO;
 extern char **environ;                   // environment array
 int main (int argc, char **argv)
 {
 	setbuf(stdout, NULL);
 	if(argv[1]&& !access(argv[1],F_OK))
 		freopen(argv[1],"r",stdin);
-
+	int pipe[2];
+	pipe(pipe);
+	pipe[STDIN_FILENO]=STDIN_FILENO;
+	pipe[STDOUT_FILENO]=STDOUT_FILENO;
 	int status;
+	int tokenindex=0;
 	char buf[MAX_BUFFER];                    //   line buffer
 	buf[0]='\0';
 	char *args[MAX_ARGS];               //       pointers to arg strings
@@ -53,7 +57,9 @@ int main (int argc, char **argv)
 
 		// get command line from input
 
-		fputs (prompt, stdout);                // write prompt
+		getcwd(buf,MAX_BUFFER);
+		strcat(buf,prompt);	
+		fputs (buf, stdout);                // write prompt
 		if (fgets (buf, MAX_BUFFER, stdin )) { // read a line
 
 			// tokenize the input into args array
@@ -88,7 +94,6 @@ int main (int argc, char **argv)
 						while(fgets(buf,MAX_BUFFER,src));
 						fputs(buf,dst);	
 
-						remove(args[1]);
 					}
 
 					continue;
@@ -178,6 +183,8 @@ int main (int argc, char **argv)
 
 
 				arg = args;
+				strchrnul('>',
+				popen(args[0],
 			 	if(!fork()){
 					execvp(args[0],args);
 					_exit(EXIT_SUCCESS);
