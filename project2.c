@@ -20,6 +20,8 @@ wipe - clears the screen
 
 esc - exits from the program
 */
+#define _XOPEN_SOURCE 700
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
@@ -27,22 +29,54 @@ esc - exits from the program
 #include <stdlib.h>
 #include <strings.h>
 #include <unistd.h>
+#include <ftw.h>
+#include <stdint.h>
 
-
+#define MAX_FDS 1024
 #define SEPARATORS " \t\n"                     // token sparators
 #define MAX_BUFFER 1024                        // max line buffer
 #define MAX_ARGS 64                             //max # args
-int STDIN_FILENO,STDOUT_FILENO;
 extern char **environ;                   // environment array
+char*dstpath;
+
+int mkdirz(char*fpath){
+	return(mkdir(fpath,07777));
+}
+
+int mimic(char*args[MAX_ARGS]){
+	char buf[MAX_BUFFER];
+	buf[0]='\0';
+	if(!access(args[1],F_OK)&&args[1]&&args[2]){
+		FILE* src = fopen(args[1],"r");
+		FILE* dst = fopen(args[2],"w+");
+		while(fgets(buf,MAX_BUFFER,src));
+		fputs(buf,dst);
+		return 0;	
+	}else
+		return 1;
+}
+
+static int mimic_ftw_wrapper(const char*fpath,const struct stat*sb
+		,int typeflag, struct FTW *ftwbuf)
+
+{
+	if(typeflag = FTW_D)
+		mkdirz(strcat(dstpath,fpath+ftwbuf->base));
+
+	else{ 
+		char *fnargv[3] = {NULL,fpath,strcat(dstpath,fpath+ftwbuf->base)};
+
+		mimic(fnargv);
+	}
+	return 0;
+}
+
+
 int main (int argc, char **argv)
 {
 	setbuf(stdout, NULL);
 	if(argv[1]&& !access(argv[1],F_OK))
 		freopen(argv[1],"r",stdin);
-	int pipe[2];
-	pipe(pipe);
-	pipe[STDIN_FILENO]=STDIN_FILENO;
-	pipe[STDOUT_FILENO]=STDOUT_FILENO;
 	int status;
 	int tokenindex=0;
 	char buf[MAX_BUFFER];                    //   line buffer
@@ -75,17 +109,13 @@ int main (int argc, char **argv)
 					if(args[1])	remove(args[1]);
 					continue;
 				}
-				if (!strcmp(args[0],"mimic")){ 
-					if(!access(args[1],F_OK)&&args[1]&&args[2]){
-						FILE* src = fopen(args[1],"r");
-						FILE* dst = fopen(args[2],"w+");
-						while(fgets(buf,MAX_BUFFER,src));
-						fputs(buf,dst);	
+				if (!strcmp(args[0],"mimic")){
+					if(args[1]&&!strcmp(args[1],"-r")){
+						dstpath=strdup(args[3]);
+						ftw(args[2],mimic_ftw_wrapper,MAX_FDS);
+						continue;
 
 					}
-
-					continue;
-
 				}
 				if (!strcmp(args[0],"morph")){ 
 					if(!access(args[1],F_OK)&&args[1]&&args[2]){
@@ -105,7 +135,7 @@ int main (int argc, char **argv)
 
 
 					if(!fork()){
-						execlp("cat", "cat", "/projects/1/README",NULL);
+						execlp("cat", "cat", "/projects/2/README",NULL);
 						_exit(EXIT_SUCCESS);
 					}else sleep(1);
 					continue;
@@ -183,9 +213,7 @@ int main (int argc, char **argv)
 
 
 				arg = args;
-				strchrnul('>',
-				popen(args[0],
-			 	if(!fork()){
+				if(!fork()){
 					execvp(args[0],args);
 					_exit(EXIT_SUCCESS);
 				}else sleep(1);	
