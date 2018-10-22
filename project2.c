@@ -21,7 +21,6 @@ wipe - clears the screen
 esc - exits from the program
 */
 #define _XOPEN_SOURCE 700
-
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
@@ -37,18 +36,18 @@ esc - exits from the program
 #define MAX_BUFFER 1024                        // max line buffer
 #define MAX_ARGS 64                             //max # args
 extern char **environ;                   // environment array
-char*dstpath;
+const char**dstpath;
 
 int mkdirz(char*fpath){
 	return(mkdir(fpath,07777));
 }
 
-int mimic(char*args[MAX_ARGS]){
+int mimic(char* srcstr,char* dststr){
 	char buf[MAX_BUFFER];
 	buf[0]='\0';
-	if(!access(args[1],F_OK)&&args[1]&&args[2]){
-		FILE* src = fopen(args[1],"r");
-		FILE* dst = fopen(args[2],"w+");
+	if(!access(srcstr,F_OK)&&srcstr&&dststr){
+		FILE* src = fopen(srcstr,"r");
+		FILE* dst = fopen(dststr,"w+");
 		while(fgets(buf,MAX_BUFFER,src));
 		fputs(buf,dst);
 		return 0;	
@@ -56,7 +55,7 @@ int mimic(char*args[MAX_ARGS]){
 		return 1;
 }
 
-static int mimic_ftw_wrapper(const char*fpath,const struct stat*sb
+static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 		,int typeflag, struct FTW *ftwbuf)
 
 {
@@ -64,9 +63,7 @@ static int mimic_ftw_wrapper(const char*fpath,const struct stat*sb
 		mkdirz(strcat(dstpath,fpath+ftwbuf->base));
 
 	else{ 
-		char *fnargv[3] = {NULL,fpath,strcat(dstpath,fpath+ftwbuf->base)};
-
-		mimic(fnargv);
+		mimic(fpath,fpath+ftwbuf->base);
 	}
 	return 0;
 }
@@ -84,6 +81,7 @@ int main (int argc, char **argv)
 	char *args[MAX_ARGS];               //       pointers to arg strings
 	char **arg;                           //     working pointer thru args
 	char *prompt = "==>" ;                  //   shell prompt
+	dstpath = (char*)malloc(MAX_BUFFER*sizeof(char));
 
 	//keep reading input until "quit" command or eof of redirected input
 
@@ -112,7 +110,7 @@ int main (int argc, char **argv)
 				if (!strcmp(args[0],"mimic")){
 					if(args[1]&&!strcmp(args[1],"-r")){
 						dstpath=strdup(args[3]);
-						ftw(args[2],mimic_ftw_wrapper,MAX_FDS);
+						nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
 						continue;
 
 					}
