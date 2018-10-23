@@ -20,6 +20,7 @@ wipe - clears the screen
 
 esc - exits from the program
 */
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
@@ -27,35 +28,32 @@ esc - exits from the program
 #include <stdlib.h>
 #include <strings.h>
 #include <unistd.h>
-
+#include <fcntl.h>
 
 #define SEPARATORS " \t\n"                     // token sparators
 #define MAX_BUFFER 1024                        // max line buffer
 #define MAX_ARGS 64                             //max # args
-int STDIN_FILENO,STDOUT_FILENO;
+
 extern char **environ;                   // environment array
 int main (int argc, char **argv)
 {
 	setbuf(stdout, NULL);
 	if(argv[1]&& !access(argv[1],F_OK))
 		freopen(argv[1],"r",stdin);
-	int pipe[2];
-	pipe(pipe);
-	pipe[STDIN_FILENO]=STDIN_FILENO;
-	pipe[STDOUT_FILENO]=STDOUT_FILENO;
-	int status;
-	int tokenindex=0;
 	char buf[MAX_BUFFER];                    //   line buffer
 	buf[0]='\0';
 	char *args[MAX_ARGS];               //       pointers to arg strings
 	char **arg;                           //     working pointer thru args
 	char *prompt = "==>" ;                  //   shell prompt
+	int fd;
 
 	//keep reading input until "quit" command or eof of redirected input
 
 	while (!feof(stdin)) { 
 
+
 		// get command line from input
+
 
 		getcwd(buf,MAX_BUFFER);
 		strcat(buf,prompt);	
@@ -107,7 +105,7 @@ int main (int argc, char **argv)
 					if(!fork()){
 						execlp("cat", "cat", "/projects/1/README",NULL);
 						_exit(EXIT_SUCCESS);
-					}else sleep(1);
+					}else wait(0);
 					continue;
 				}
 				//environ
@@ -133,7 +131,7 @@ int main (int argc, char **argv)
 						if(!fork()){
 							execlp("ls","ls","-l",args[1],NULL);
 							_exit(EXIT_SUCCESS);
-						}else sleep(1);
+						}else wait(0);
 						continue;
 
 					}
@@ -141,7 +139,7 @@ int main (int argc, char **argv)
 						if(!fork()){
 							execlp("ls","ls","-l",NULL);
 							_exit(EXIT_SUCCESS);
-						}else sleep(1);	
+						}else wait(0);	
 					}			
 					continue;
 				}
@@ -152,7 +150,7 @@ int main (int argc, char **argv)
 					if(!fork()){
 						execlp("clear","clear",NULL);
 						_exit(EXIT_SUCCESS);
-					}else sleep(1);
+					}else wait(0);
 					continue;
 				}
 
@@ -182,13 +180,34 @@ int main (int argc, char **argv)
 				// else pass command onto OS (or in this instance, print them out)
 
 
-				arg = args;
-				strchrnul('>',
-				popen(args[0],
-			 	if(!fork()){
+				if(!fork()){
+					arg = &args[0];
+					while(*arg++){
+						if(*arg&&**arg&&!strcmp(*arg,"<")){
+							*arg=NULL;
+							fd=open(*(++arg),O_SYNC|O_RDONLY,S_IRWXU|S_IXUSR|S_IRWXO);
+							dup2(fd,STDIN_FILENO);
+							close(fd);
+
+						}
+						if(*arg&&**arg&&!strcmp(*arg,">")){
+							*arg=NULL;
+							fd=open(*(++arg),O_SYNC|O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU|S_IXUSR|S_IRWXO);
+							dup2(fd,STDOUT_FILENO);
+							close(fd);
+						}
+						if(*arg&&**arg&&!strcmp(*arg,">>")){
+							*arg=NULL;
+							fd=open(*(++arg),O_SYNC|O_WRONLY|O_CREAT|O_APPEND,S_IRWXU|S_IXUSR|S_IRWXO);
+							dup2(fd,STDOUT_FILENO);
+							close(fd);
+						}
+					}
+					arg = &args[0];
 					execvp(args[0],args);
-					_exit(EXIT_SUCCESS);
-				}else sleep(1);	
+				}else wait(0);	
+				fflush(stdin);
+				continue;
 			}
 		}
 	}
