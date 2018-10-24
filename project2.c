@@ -60,7 +60,6 @@ int mimic(char* srcstr,char* dststr){
 	}else
 		return 1;
 }
-
 static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 		,int typeflag, struct FTW *ftwbuf)
 
@@ -78,6 +77,17 @@ static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 	return 0;
 }
 
+static int morph_nftw_wrapper(const char* fpath, const struct stat*sb
+		,int typeflag, struct FTW *ftwbuf)
+{
+	char tmp[MAX_BUFFER];
+	strncpy(tmp,fpath,MAX_BUFFER);
+	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
+	
+	mimic_nftw_wrapper(fpath,sb,typeflag,ftwbuf);
+	remove(tmp);
+	return 0;
+}
 
 int main (int argc, char **argv)
 {
@@ -122,7 +132,7 @@ int main (int argc, char **argv)
 
 			if (args[0]) {                     // if there's anything ther
 				//erase
-				if (!strcmp(args[0],"erase")){
+				if (!strcmp(args[0],"erase")||!strcmp(args[0],"rmdirz")){
 					if(args[1])	remove(args[1]);
 					continue;
 				}
@@ -130,24 +140,33 @@ int main (int argc, char **argv)
 					if(args[1]&&!strcmp(args[1],"-r")){
 						dstpath=strdup(args[3]);
 						nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
-						continue;
 
 					}
+					else if(args[1]&&args[2]){
+						char*tmp;
+						strcpy(tmp,args[1]);
+						strcpy(buf,args[2]);
+						mimic(tmp,buf);
+					}
+					continue;
 				}
 				if (!strcmp(args[0],"morph")){ 
-					if(!access(args[1],F_OK)&&args[1]&&args[2]){
-						FILE* src = fopen(args[1],"r");
-						FILE* dst = fopen(args[2],"w+");
-						while(fgets(buf,MAX_BUFFER,src));
-						fputs(buf,dst);	
+				
+					if(args[1]&&!strcmp(args[1],"-r")){
+						dstpath=strdup(args[3]);
+						nftw(args[2],morph_nftw_wrapper,MAX_FDS,0);
 
 					}
+					else if(args[1]&&args[2]){
+						char*tmp;
+						strcpy(tmp,args[1]);
+						strcpy(buf,args[2]);
+						mimic(tmp,buf);
+						remove(args[1]);
+					}
+					continue;				}
 
-					continue;
-
-				}
-
-
+			
 				if (!strcmp(args[0],"help")){
 
 
