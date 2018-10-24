@@ -142,14 +142,14 @@ int main (int argc, char **argv)
 				}
 				if (!strcmp(args[0],"mimic")){
 					if(args[1]&&!strcmp(args[1],"-r")&&args[2]&&args[3]){
-						dstpath=strdup(args[3]);
+						dstpath=strncpy(dstpath,args[3],MAX_BUFFER);
 						nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
 
 					}
 					else if(args[1]&&args[2]){
 						char tmp[MAX_BUFFER];
-						strcpy(tmp,args[1]);
-						strcpy(buf,args[2]);
+						strncpy(tmp,args[1],MAX_BUFFER);
+						strncpy(buf,args[2],MAX_BUFFER);
 						mimic(tmp,buf);
 					}
 					continue;
@@ -163,12 +163,14 @@ int main (int argc, char **argv)
 					}
 					else if(args[1]&&args[2]){
 						char tmp[MAX_BUFFER];
-						strcpy(tmp,args[1]);
-						strcpy(buf,args[2]);
+						strncpy(tmp,args[1],MAX_BUFFER);
+						strncpy(buf,args[2],MAX_BUFFER);
 						mimic(tmp,buf);
-						remove(args[1]);
+						if(!access(args[1],F_OK)) remove(args[1]);
 					}
-					continue;				}
+					continue;	
+				}
+
 
 
 				if (!strcmp(args[0],"help")){
