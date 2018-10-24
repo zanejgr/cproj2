@@ -49,13 +49,13 @@ int mkdirz(char*fpath){
 }
 
 int mimic(char* srcstr,char* dststr){
-	char buf[MAX_BUFFER];
-	buf[0]='\0';
-	if(!access(srcstr,F_OK)&&srcstr&&dststr){
+	char buff[MAX_BUFFER];
+	buff[0]='\0';
+	if(!access(srcstr,F_OK)){
 		FILE* src = fopen(srcstr,"r");
 		FILE* dst = fopen(dststr,"w+");
-		while(fgets(buf,MAX_BUFFER,src));
-		fputs(buf,dst);
+		while(fgets(buff,MAX_BUFFER,src))
+			fputs(buff,dst);
 		return 0;	
 	}else
 		return 1;
@@ -67,7 +67,7 @@ static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 	char tmp[MAX_BUFFER];
 	strncpy(tmp,fpath,MAX_BUFFER);
 	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
-		
+
 	if(typeflag = FTW_D){
 		mkdirz(strcat(dstpath,tmp));
 
@@ -83,7 +83,7 @@ static int morph_nftw_wrapper(const char* fpath, const struct stat*sb
 	char tmp[MAX_BUFFER];
 	strncpy(tmp,fpath,MAX_BUFFER);
 	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
-	
+
 	mimic_nftw_wrapper(fpath,sb,typeflag,ftwbuf);
 	remove(tmp);
 	return 0;
@@ -136,14 +136,18 @@ int main (int argc, char **argv)
 					if(args[1])	remove(args[1]);
 					continue;
 				}
+				if (!strcmp(args[0],"mkdirz")){
+					if(args[1])	mkdirz(args[1]);
+					continue;
+				}
 				if (!strcmp(args[0],"mimic")){
-					if(args[1]&&!strcmp(args[1],"-r")){
+					if(args[1]&&!strcmp(args[1],"-r")&&args[2]&&args[3]){
 						dstpath=strdup(args[3]);
 						nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
 
 					}
 					else if(args[1]&&args[2]){
-						char*tmp;
+						char tmp[MAX_BUFFER];
 						strcpy(tmp,args[1]);
 						strcpy(buf,args[2]);
 						mimic(tmp,buf);
@@ -151,14 +155,14 @@ int main (int argc, char **argv)
 					continue;
 				}
 				if (!strcmp(args[0],"morph")){ 
-				
+
 					if(args[1]&&!strcmp(args[1],"-r")){
 						dstpath=strdup(args[3]);
 						nftw(args[2],morph_nftw_wrapper,MAX_FDS,0);
 
 					}
 					else if(args[1]&&args[2]){
-						char*tmp;
+						char tmp[MAX_BUFFER];
 						strcpy(tmp,args[1]);
 						strcpy(buf,args[2]);
 						mimic(tmp,buf);
@@ -166,7 +170,7 @@ int main (int argc, char **argv)
 					}
 					continue;				}
 
-			
+
 				if (!strcmp(args[0],"help")){
 
 
@@ -234,7 +238,7 @@ int main (int argc, char **argv)
 						if(!fork()){
 							execlp("pwd","pwd",NULL);
 							_exit(EXIT_SUCCESS);
-						}else sleep(1);
+						}else wait(0);
 						fputs("\n",stdout);
 					}
 					continue;
