@@ -20,8 +20,11 @@ wipe - clears the screen
 
 esc - exits from the program
 */
+
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 500
+
 #include <sys/stat.h>
-#define _XOPEN_SOURCE 700
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
@@ -30,12 +33,6 @@ esc - exits from the program
 #include <strings.h>
 #include <unistd.h>
 #include <fcntl.h>
-
-#define SEPARATORS " \t\n"                     // token sparators
-#define MAX_BUFFER 1024                        // max line buffer
-#define MAX_ARGS 64                             //max # args
-
-
 #include <ftw.h>
 #include <stdint.h>
 
@@ -45,7 +42,7 @@ esc - exits from the program
 #define MAX_ARGS 64                             //max # args
 
 extern char **environ;                   // environment array
-const char**dstpath;
+char*dstpath;
 
 int mkdirz(char*fpath){
 	return(mkdir(fpath,07777));
@@ -68,11 +65,15 @@ static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 		,int typeflag, struct FTW *ftwbuf)
 
 {
-	if(typeflag = FTW_D)
-		mkdirz(strcat(dstpath,fpath+ftwbuf->base));
+	char tmp[MAX_BUFFER];
+	strncpy(tmp,fpath,MAX_BUFFER);
+	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
+		
+	if(typeflag = FTW_D){
+		mkdirz(strcat(dstpath,tmp));
 
-	else{ 
-		mimic(fpath,fpath+ftwbuf->base);
+	}else{ 
+		mimic(tmp,dstpath);
 	}
 	return 0;
 }
