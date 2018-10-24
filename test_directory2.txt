@@ -1,3 +1,0 @@
-chdir /projects/1
-filez project1
-esc
