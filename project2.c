@@ -24,6 +24,7 @@ esc - exits from the program
 #define _DEFAULT_SOURCE
 #define _XOPEN_SOURCE 500
 
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -42,8 +43,12 @@ esc - exits from the program
 #define MAX_ARGS 64                             //max # args
 
 extern char **environ;                   // environment array
+char*srcpath;
 char*dstpath;
-
+int erase_nftw_wrapper(const char*fpath,const struct stat*sb
+		,int typeflag,struct FTW *ftwbuf){
+	return(remove(fpath));
+}
 int mkdirz(char*fpath){
 	return(mkdir(fpath,07777));
 }
@@ -58,43 +63,57 @@ int mimic(char* srcstr,char* dststr){
 			fputs(buff,dst);
 		return 0;	
 	}else
+		perror("invalid file in mimic");
 		return 1;
+
 }
 static int mimic_nftw_wrapper(const char*fpath,const struct stat*sb
 		,int typeflag, struct FTW *ftwbuf)
 
 {
+	char buf[MAX_BUFFER];
 	char tmp[MAX_BUFFER];
-	strncpy(tmp,fpath,MAX_BUFFER);
-	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
+	strncpy(tmp,dstpath,MAX_BUFFER);
+	strcat(tmp,fpath+strlen(srcpath));
+	strncpy(buf,fpath,MAX_BUFFER);
+	switch(typeflag){	
+		case FTW_D:
+		mkdirz(tmp);
+		puts("Directory in nftw\ntmp=");
+		puts(tmp);
+		puts("buf=");
+		puts(buf);
+		puts("fpath");
+		puts(fpath);
+		break;
 
-	if(typeflag = FTW_D){
-		mkdirz(strcat(dstpath,tmp));
+		case FTW_F:
+		mimic(buf,tmp);
+		
+		puts(tmp);
+		puts("buf=");
+		puts(buf);
+		puts("File in nftw");
+		break;
 
-	}else{ 
-		mimic(tmp,dstpath);
+		default:
+		perror("invalid file in directory");
+		
+		return 1;
+
 	}
 	return 0;
 }
 
-static int morph_nftw_wrapper(const char* fpath, const struct stat*sb
-		,int typeflag, struct FTW *ftwbuf)
-{
-	char tmp[MAX_BUFFER];
-	strncpy(tmp,fpath,MAX_BUFFER);
-	strncat(tmp,fpath+ftwbuf->base,MAX_BUFFER-strlen(dstpath));
-
-	mimic_nftw_wrapper(fpath,sb,typeflag,ftwbuf);
-	remove(tmp);
-	return 0;
-}
 
 int main (int argc, char **argv)
 {
+	int isBatchFile = 0;
 	setbuf(stdout, NULL);
-	if(argv[1]&& !access(argv[1],F_OK))
+	if(argv[1]&& !access(argv[1],F_OK)){
 		freopen(argv[1],"r",stdin);
-
+		isBatchFile = 1;
+	}
 
 	int status;
 	int tokenindex=0;
@@ -108,7 +127,7 @@ int main (int argc, char **argv)
 	int fd;
 
 	dstpath = (char*)malloc(MAX_BUFFER*sizeof(char));
-
+	srcpath = (char*)malloc(MAX_BUFFER*sizeof(char));
 
 	//keep reading input until "quit" command or eof of redirected input
 
@@ -121,8 +140,10 @@ int main (int argc, char **argv)
 		getcwd(buf,MAX_BUFFER);
 		strcat(buf,prompt);	
 		fputs (buf, stdout);                // write prompt
+		
 		if (fgets (buf, MAX_BUFFER, stdin )) { // read a line
 
+			if(isBatchFile){puts(buf);}
 			// tokenize the input into args array
 
 			arg = args;
@@ -143,7 +164,8 @@ int main (int argc, char **argv)
 				if (!strcmp(args[0],"mimic")){
 					if(args[1]&&!strcmp(args[1],"-r")&&args[2]&&args[3]){
 						dstpath=strncpy(dstpath,args[3],MAX_BUFFER);
-						nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
+						srcpath=strncpy(srcpath,args[2],MAX_BUFFER);
+						nftw(args[2],mimic_nftw_wrapper,1,0);
 
 					}
 					else if(args[1]&&args[2]){
@@ -157,9 +179,13 @@ int main (int argc, char **argv)
 				if (!strcmp(args[0],"morph")){ 
 
 					if(args[1]&&!strcmp(args[1],"-r")){
-						dstpath=strdup(args[3]);
-						nftw(args[2],morph_nftw_wrapper,MAX_FDS,0);
+						dstpath=strncpy(dstpath,args[3],MAX_BUFFER);
+						srcpath=strncpy(srcpath,args[2],MAX_BUFFER);
+						nftw(args[2],mimic_nftw_wrapper,1,0);
 
+	nftw(args[2],mimic_nftw_wrapper,MAX_FDS,0);
+
+						nftw(args[2],erase_nftw_wrapper,MAX_FDS,FTW_DEPTH);
 					}
 					else if(args[1]&&args[2]){
 						char tmp[MAX_BUFFER];
@@ -167,6 +193,7 @@ int main (int argc, char **argv)
 						strncpy(buf,args[2],MAX_BUFFER);
 						mimic(tmp,buf);
 						if(!access(args[1],F_OK)) remove(args[1]);
+						else	perror("something's really really wrong!");
 					}
 					continue;	
 				}
